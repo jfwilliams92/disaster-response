@@ -124,7 +124,7 @@ def load_data(database_filepath):
 
     return X.values, Y.values, list(Y.columns)
 
-def build_model(X_train, y_train, n_iter):
+def build_model(X_train, Y_train, n_iter):
 
     pipeline_log = Pipeline([
         ('msg_tokenizer', MessageTokenizer()),
@@ -152,7 +152,7 @@ def build_model(X_train, y_train, n_iter):
     }
 
     cv_log = RandomizedSearchCV(pipeline_log, search_params, n_iter=n_iter, cv=3, scoring=hamming_scorer, verbose=2)
-    search_log = cv_log.fit(X_train, y_train)
+    search_log = cv_log.fit(X_train, Y_train)
 
     return search_log.best_estimator_
 
@@ -165,7 +165,6 @@ def evaluate_model(model, X_test, Y_test, category_names):
         print(confusion_matrix(Y_test[:, idx], y_pred[:, idx]))
         print(classification_report(Y_test[:, idx], y_pred[:, idx]))
         print('\n')
-
 
 def save_model(model, model_filepath):
     with open(model_filepath, 'wb') as pkl_path:
@@ -194,12 +193,9 @@ def main():
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
-    print('Building model...')
+    print('Building model and training model...')
     model = build_model(X_train, Y_train, n_iter=n_tune_iter)
-        
-    print('Training model...')
-    model.fit(X_train, Y_train)
-        
+
     print('Evaluating model...')
     evaluate_model(model, X_test, Y_test, category_names)
 
