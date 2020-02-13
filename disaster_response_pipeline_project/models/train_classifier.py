@@ -23,6 +23,9 @@ from sklearn.metrics import hamming_loss, make_scorer
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import RandomizedSearchCV
 
+from sklearn.utils.testing import ignore_warnings
+from sklearn.exceptions import ConvergenceWarning
+
 import pickle
 
 # define a function that will allow a treebank POS tag to be converted into a WordNet
@@ -119,46 +122,69 @@ def load_data(database_filepath):
 
     return X.values, Y.values, list(Y.columns)
 
+# ignore ConvergenceWarnings
+@ignore_warnings(category=ConvergenceWarning)
 def build_model(X_train, Y_train, n_iter):
+    if n_iter > 0:
 
-    pipeline_log = Pipeline([
-        ('msg_tokenizer', MessageTokenizer()),
-        # Count Vectorizer with Tokenizer
-        ('count_vec', CountVectorizer()),
-        # TF-IDF Transformer
-        ('tfidf', TfidfTransformer()),
-        # classifier - one classifier per label
-        ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs')))
-    ])
+        pipeline_log = Pipeline([
+            ('msg_tokenizer', MessageTokenizer()),
+            # Count Vectorizer with Tokenizer
+            ('count_vec', CountVectorizer()),
+            # TF-IDF Transformer
+            ('tfidf', TfidfTransformer()),
+            # classifier - one classifier per label
+            ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs')))
+        ])
 
-    # tune the grid with hamming loss
-    hamming_scorer = make_scorer(hamming_loss, greater_is_better=False)
-    search_params = {
-        'msg_tokenizer__remove_stops': [False, True],
-        'msg_tokenizer__lemmatize': [False, True],
-        'tfidf__norm': [None, 'l1', 'l2'],
-        'tfidf__use_idf': [False, True],
-        'tfidf__smooth_idf': [False, True],
-        'count_vec__ngram_range': [(1,1), (1,2), (1,3), (1,4)],
-        'count_vec__max_features': [None, 100, 500, 1000],
-        'clf__estimator__dual': [False, True],
-        'clf__estimator__C': [1, 10, 50, 100],
-        'clf__estimator__class_weight': [None, 'balanced']
-    }
-    cv_log = RandomizedSearchCV(pipeline_log, search_params, n_iter=n_iter, cv=3, scoring=hamming_scorer, verbose=2)
-    search_log = cv_log.fit(X_train, Y_train)
+        # tune the grid with hamming loss
+        hamming_scorer = make_scorer(hamming_loss, greater_is_better=False)
+        search_params = {
+            'msg_tokenizer__remove_stops': [False, True],
+            'msg_tokenizer__lemmatize': [False, True],
+            'tfidf__norm': [None, 'l1', 'l2'],
+            'tfidf__use_idf': [False, True],
+            'tfidf__smooth_idf': [False, True],
+            'count_vec__ngram_range': [(1,1), (1,2), (1,3), (1,4)],
+            'count_vec__max_features': [None, 100, 500, 1000],
+            'clf__estimator__dual': [False, True],
+            'clf__estimator__C': [1, 10, 50, 100],
+            'clf__estimator__class_weight': [None, 'balanced']
+        }
+        cv_log = RandomizedSearchCV(pipeline_log, search_params, n_iter=n_iter, cv=3, scoring=hamming_scorer, verbose=2)
+        search_log = cv_log.fit(X_train, Y_train)
 
-    return search_log.best_estimator_
+        print('Best params found: \n')
+        print(search_log.best_params_)
+
+        return search_log.best_estimator_
+    
+    else:
+        pipeline_log = Pipeline([
+            ('msg_tokenizer', MessageTokenizer(remove_stops=False, lemmatize=True)),
+            # Count Vectorizer with Tokenizer
+            ('count_vec', CountVectorizer(ngram_range=(1,4), max_features=1000)),
+            # TF-IDF Transformer
+            ('tfidf', TfidfTransformer(norm='l2', use_idf=False, smooth_idf=False)),
+            # classifier - one classifier per label
+            ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs', C=10, dual=True, class_weight=None)))
+        ])
+
+        pipeline_log.fit(X_train, Y_train)
+
+        return pipeline_log
 
 def evaluate_model(model, X_test, Y_test, category_names):
     y_pred = model.predict(X_test)
     if isinstance(Y_test, pd.DataFrame):
         Y_test = Y_test.values
     for idx, label in enumerate(category_names):
-        print(label, '\n')
-        print(confusion_matrix(Y_test[:, idx], y_pred[:, idx]))
-        print(classification_report(Y_test[:, idx], y_pred[:, idx]))
+        print('\n', f'MESSAGE LABEL: {label}', '\n')
+        print("Confusion Matrix: ")
+        print(pd.DataFrame(data=confusion_matrix(Y_test[:, idx], y_pred[:, idx]), columns=['PredNeg', 'PredPos'], index=['TrueNeg', 'TruePos']))
         print('\n')
+        print("Classification Report: ")
+        print(classification_report(Y_test[:, idx], y_pred[:, idx]))
 
 def save_model(model, model_filepath):
     with open(model_filepath, 'wb') as pkl_path:
@@ -169,7 +195,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('database_filepath', help='The location of the database file containing the message data.')
     parser.add_argument('model_filepath', help='The filepath where you wish the fitted model to be saved.')
-    parser.add_argument('n_tune_iter', type=int, default=4, help='Number of hyperparameter combinations to test.')
+    parser.add_argument('--n_tune_iter', type=int, help='Optional: number of hyperparameter combinations to test.')
     try:
         args = parser.parse_args()
     except:
@@ -181,7 +207,9 @@ def main():
             """
         )
         raise
-    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, args.n_tune_iter
+    database_filepath, model_filepath = args.database_filepath, args.model_filepath
+    n_tune_iter = 0 if not args.n_tune_iter else args.n_tune_iter
+
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
