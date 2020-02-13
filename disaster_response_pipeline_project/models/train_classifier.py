@@ -187,8 +187,7 @@ def main():
             """
         )
         raise
-
-    database_filepath, model_filepath, n_tune_iter = args
+    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, args.n_tune_iter
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
