@@ -16,6 +16,7 @@ def clean_data(df):
     cats_expanded = df.categories.str.split(';', expand=True)
     labels = list(cats_expanded.iloc[0, :].str.split('-', expand=True)[0])
     cats_expanded = cats_expanded.apply(lambda col: col.str.replace('[^0-9]', ''))
+    cats_expanded = cats_expanded.astype(int)
     cats_expanded.columns = labels
     clean_cats = df \
         .merge(cats_expanded, how='inner', left_index=True, right_index=True) \
@@ -27,7 +28,7 @@ def clean_data(df):
 def save_data(df, database_filename):
 
     with sqlite3.connect(database_filename) as cxn:
-        df.to_sql('CleanMessages', con=cxn, if_exists='replace')
+        df.to_sql('CleanMessages', con=cxn, if_exists='replace', index=False)
     
 
 
