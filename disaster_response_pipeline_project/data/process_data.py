@@ -27,7 +27,7 @@ def clean_data(df):
 def save_data(df, database_filename):
 
     with sqlite3.connect(database_filename) as cxn:
-        df.to_sql('CleanMessages', con=cxn)
+        df.to_sql('CleanMessages', con=cxn, if_exists='replace')
     
 
 
