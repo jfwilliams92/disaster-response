@@ -1,10 +1,5 @@
 import sys
 
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('wordnet')
-
 # import libraries
 import pandas as pd
 import sqlite3
@@ -150,7 +145,6 @@ def build_model(X_train, Y_train, n_iter):
         'clf__estimator__C': [1, 10, 50, 100],
         'clf__estimator__class_weight': [None, 'balanced']
     }
-
     cv_log = RandomizedSearchCV(pipeline_log, search_params, n_iter=n_iter, cv=3, scoring=hamming_scorer, verbose=2)
     search_log = cv_log.fit(X_train, Y_train)
 
@@ -187,7 +181,7 @@ def main():
             """
         )
         raise
-    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, args.n_tune_iter
+    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, int(args.n_tune_iter)
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
