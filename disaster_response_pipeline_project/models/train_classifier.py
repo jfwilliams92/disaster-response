@@ -31,7 +31,14 @@ import pickle
 # define a function that will allow a treebank POS tag to be converted into a WordNet
 # POS Tag so the lemmatizer will understand it
 def get_wordnet_pos(treebank_tag):
+    """Convert a TreeBank POS tag into a WordNet POS tag.
 
+    Args:
+        treebank_tag (TreeBank POS tag): TreeBank Part of Speech tag
+    
+    Returns:
+        wordnet tag (WordNet POS tag): WordNet Part of Speech tag
+    """
     if treebank_tag.startswith('J'):
         return wordnet.ADJ
     elif treebank_tag.startswith('V'):
@@ -46,14 +53,41 @@ def get_wordnet_pos(treebank_tag):
 
 # implement a custom transformer to determine if removing stops and/or lemmatizing improves model performance
 class MessageTokenizer(BaseEstimator, TransformerMixin):
+    """Transformer that cleans and tokenizes text. Optionally removes stop words
+    and lemmatizes tokens as well. Stop words are words that commonly appear in a language.
+    Lemmatization is the process of reducing a word to its base form.
+    """
+
     def __init__(self, remove_stops=True, lemmatize=True):
+        """Initialize.
+
+        Args:
+            remove_stops (bool): Whether or not to remove stop words.
+            lemmatize (bool): Whether or not to lemmatize words.
+
+        Returns:
+            None
+        """
+
         self.remove_stops = remove_stops
         self.lemmatize = lemmatize
         
     def fit(self, X, y=None):
+        """Placeholder method to conform with sklearn API"""
+
         return self
     
     def transform(self, X, y=None):
+        """Clean and tokenize messages. Optionally remove stop words and lemmatize
+        if self.remove_stops=True or self.lemmatize=True.
+
+        Args:
+            X (arr): array of text documents to transform
+        
+        Returns:
+            X_transformed (arr): array of transformed text documents
+        """
+
         X_transformed = []
         
         # iterate over supplied messages
@@ -64,7 +98,7 @@ class MessageTokenizer(BaseEstimator, TransformerMixin):
             # remove all non-alphanumeric characters
             text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
               
-            # lower and strip whitespace
+            # lower text and strip whitespace
             text = text.lower().strip()
     
             # tokenize words - nltk.tokenize.word_tokenize
@@ -104,6 +138,17 @@ class MessageTokenizer(BaseEstimator, TransformerMixin):
         return X_transformed 
 
 def load_data(database_filepath):
+    """Load message and category data from a sqlite3 database file.
+
+    Args:
+        database_filepath (str): location of the database file to load data from.
+    
+    Returns:
+        X (arr): array of text documents
+        Y (arr): multidimensional array of shape (n_messages, n_message_labels)
+        labels (arr): list of label names
+    """
+    # connect to db and read table
     engine = create_engine(f'sqlite:///{database_filepath}')
     df = pd.read_sql('SELECT * FROM CleanMessages', engine)
 
@@ -113,6 +158,7 @@ def load_data(database_filepath):
 
     # check to make sure we have at least one instance for each label
     labels_with_no_instance = Y.columns[~(Y == 1).any(axis=0)]
+    # drop labels that have no instance of positive class
     Y = Y.drop(labels_with_no_instance, axis=1)
 
     # drop rows that are non-binary
@@ -125,8 +171,23 @@ def load_data(database_filepath):
 # ignore ConvergenceWarnings
 @ignore_warnings(category=ConvergenceWarning)
 def build_model(X_train, Y_train, n_iter):
+    """Fit an estimator on training data. Optionally tune estimator with 
+    a RandomizedSearch over hyperparameter space.
+
+    Args:
+        X_train (arr): array of text documents.
+        Y_train (arr): array of message labels of shape (n_messages, n_message_labels)
+        n_iter (int): number of hyperparameter combinations to sample. If 0, will fit 
+            model on preselected hyperparameter combination.
+    
+    Returns:
+        fitted_pipeline: pipeline fitted on training data with tuned or selected hyperparameters.
+    """
+    # search for best hyperparameters if n_iter > 0
     if n_iter > 0:
         print('Searching for best hyperparameters...')
+
+        # create base pipeline
         pipeline_log = Pipeline([
             ('msg_tokenizer', MessageTokenizer()),
             # Count Vectorizer with Tokenizer
@@ -137,8 +198,9 @@ def build_model(X_train, Y_train, n_iter):
             ('clf', OneVsRestClassifier(LogisticRegression(solver='liblinear')))
         ])
 
-        # tune the grid with hamming loss
+        # tune the pipeline with hamming loss
         hamming_scorer = make_scorer(hamming_loss, greater_is_better=False)
+        # list out all possible hyperparameter values
         search_params = {
             'msg_tokenizer__remove_stops': [False, True],
             'msg_tokenizer__lemmatize': [False, True],
@@ -151,14 +213,17 @@ def build_model(X_train, Y_train, n_iter):
             'clf__estimator__C': [1, 10, 50, 100],
             'clf__estimator__class_weight': [None, 'balanced']
         }
+        # search over hyperparameter space with n_iter combinations selected - each selection is fit and scored cv=3 times
         cv_log = RandomizedSearchCV(pipeline_log, search_params, n_iter=n_iter, cv=3, scoring=hamming_scorer, verbose=2)
         search_log = cv_log.fit(X_train, Y_train)
 
         print('Best params found: \n')
         print(search_log.best_params_)
 
+        # return the estimator/hyperparam combination that had the best score in the RandomizedSearch
         return search_log.best_estimator_
-    
+
+    # if n_iter = 0, fit on training data with preselected hyperparameters
     else:
         print('Fitting pipeline with pre-selected hyperparameters.')
         pipeline_log = Pipeline([
@@ -176,22 +241,56 @@ def build_model(X_train, Y_train, n_iter):
         return pipeline_log
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """Predict on test data and print out evaluation of predictions.
+
+    Args:
+        model: trained estimator
+        X_test (arr): array of text documents
+        Y_test (arr): multidim array of shape (n_messages, n_message_labels)
+        category_names (list): list of message label names
+    
+    Returns:
+        None
+    """
+    # predict on the test data
     y_pred = model.predict(X_test)
     if isinstance(Y_test, pd.DataFrame):
         Y_test = Y_test.values
+    # print out metrics
     for idx, label in enumerate(category_names):
         print('\n', f'MESSAGE LABEL: {label}', '\n')
         print("Confusion Matrix: ")
+        # convert confusion matrix to dataframe to allow labeling of axes
         print(pd.DataFrame(data=confusion_matrix(Y_test[:, idx], y_pred[:, idx]), columns=['PredNeg', 'PredPos'], index=['TrueNeg', 'TruePos']))
         print('\n')
         print("Classification Report: ")
         print(classification_report(Y_test[:, idx], y_pred[:, idx]))
 
 def save_model(model, model_filepath):
+    """Save trained model to pickle file.
+
+    Args:
+        model: trained estimator
+        model_filepath (str): path to store pickled model
+    
+    Returns:
+        None
+    """
+
     with open(model_filepath, 'wb') as pkl_path:
         pickle.dump(model, pkl_path)
 
 def main():
+    """"Main entry point of program. Takes command line arguments as defined in the ArgumentParser.
+    Expected command line arguments are:
+    database_filepath (str): location of databasefile containing the message data
+    model_filepath (str): path to store pickled model
+    n_tune_iter (int): optional, number of hyperparameter combinations to test
+
+    Returns: 
+        None
+    """
+
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('database_filepath', help='The location of the database file containing the message data.')
@@ -208,7 +307,9 @@ def main():
             """
         )
         raise
+    # assign command line arguments to vars
     database_filepath, model_filepath = args.database_filepath, args.model_filepath
+    # if optional n_tune_iter is not supplied, set to 0
     n_tune_iter = 0 if not args.n_tune_iter else args.n_tune_iter
 
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
