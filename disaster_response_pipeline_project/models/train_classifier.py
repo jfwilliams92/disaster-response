@@ -126,7 +126,7 @@ def load_data(database_filepath):
 @ignore_warnings(category=ConvergenceWarning)
 def build_model(X_train, Y_train, n_iter):
     if n_iter > 0:
-
+        print('Searching for best hyperparameters...')
         pipeline_log = Pipeline([
             ('msg_tokenizer', MessageTokenizer()),
             # Count Vectorizer with Tokenizer
@@ -134,7 +134,7 @@ def build_model(X_train, Y_train, n_iter):
             # TF-IDF Transformer
             ('tfidf', TfidfTransformer()),
             # classifier - one classifier per label
-            ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs')))
+            ('clf', OneVsRestClassifier(LogisticRegression(solver='liblinear')))
         ])
 
         # tune the grid with hamming loss
@@ -160,6 +160,7 @@ def build_model(X_train, Y_train, n_iter):
         return search_log.best_estimator_
     
     else:
+        print('Fitting pipeline with pre-selected hyperparameters.')
         pipeline_log = Pipeline([
             ('msg_tokenizer', MessageTokenizer(remove_stops=False, lemmatize=True)),
             # Count Vectorizer with Tokenizer
@@ -167,7 +168,7 @@ def build_model(X_train, Y_train, n_iter):
             # TF-IDF Transformer
             ('tfidf', TfidfTransformer(norm='l2', use_idf=False, smooth_idf=False)),
             # classifier - one classifier per label
-            ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs', C=10, dual=True, class_weight=None)))
+            ('clf', OneVsRestClassifier(LogisticRegression(solver='liblinear', C=10, dual=True, class_weight=None)))
         ])
 
         pipeline_log.fit(X_train, Y_train)
@@ -203,7 +204,7 @@ def main():
             """Argument parsing failed. Please provide the location of the database file containing the message data,
             the filepath where you wish the fitted model to be saved, and the number of 
             hyperparameter combinations you would like to test.  \n\nExample usage: 
-            python train_classifier.py ../data/DisasterResponse.db classifier.pkl 10
+            python train_classifier.py ../data/DisasterResponse.db classifier.pkl --n_tune_iter 10
             """
         )
         raise
