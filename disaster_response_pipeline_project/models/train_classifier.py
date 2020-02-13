@@ -128,7 +128,7 @@ def build_model(X_train, Y_train, n_iter):
         # TF-IDF Transformer
         ('tfidf', TfidfTransformer()),
         # classifier - one classifier per label
-        ('clf', OneVsRestClassifier(LogisticRegression()))
+        ('clf', OneVsRestClassifier(LogisticRegression(solver='lbfgs')))
     ])
 
     # tune the grid with hamming loss
@@ -169,7 +169,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('database_filepath', help='The location of the database file containing the message data.')
     parser.add_argument('model_filepath', help='The filepath where you wish the fitted model to be saved.')
-    parser.add_argument('n_tune_iter', help='Number of hyperparameter combinations to test.')
+    parser.add_argument('n_tune_iter', type=int, default=4, help='Number of hyperparameter combinations to test.')
     try:
         args = parser.parse_args()
     except:
@@ -181,7 +181,7 @@ def main():
             """
         )
         raise
-    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, int(args.n_tune_iter)
+    database_filepath, model_filepath, n_tune_iter = args.database_filepath, args.model_filepath, args.n_tune_iter
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
