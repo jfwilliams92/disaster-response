@@ -30,20 +30,3 @@
     </div>
 
 {% endblock %}
-
-<footer>
-
-    <script type="text/javascript">
-        // plots the figure with id
-        // id must match the div id above in the html
-        var graphs = {{graphJSON | safe}};
-        var ids = {{ids | safe}};
-
-        for(var i in graphs) {
-            Plotly.plot(ids[i],
-                graphs[i].data,
-                graphs[i].layout || {});
-        }
-    </script>
-
-</footer>
