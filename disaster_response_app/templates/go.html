@@ -11,8 +11,18 @@
     <h1 class="text-center">Result</h1>
         <ul class="list-group">
             {% for category, classification in classification_result.items() %}
-                {% if classification == 1 %}
-                    <li class="list-group-item list-group-item-success text-center">{{category.replace('_', ' ').title()}}</li>
+                {% if classification_type == 'hard_class' %}
+                    {% if classification == 1 %}
+                        <li id="{{category}}" class="list-group-item list-group-item-success text-center">{{category.replace('_', ' ').title()}}</li>
+                    {% endif %}
+                {% else %}
+                    {% if classification <= 0.33 %}
+                        <li id="{{category}}" class="list-group-item list-group-item-danger text-center">{{category.replace('_', ' ').title()}}</li>
+                    {% elif classification <= 0.67 %}
+                        <li id="{{category}}" class="list-group-item list-group-item-warning text-center">{{category.replace('_', ' ').title()}}</li>
+                    {% else %}
+                        <li id="{{category}}" class="list-group-item list-group-item-success text-center">{{category.replace('_', ' ').title()}}</li>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
 
@@ -20,3 +30,20 @@
     </div>
 
 {% endblock %}
+
+<footer>
+
+    <script type="text/javascript">
+        // plots the figure with id
+        // id must match the div id above in the html
+        var graphs = {{graphJSON | safe}};
+        var ids = {{ids | safe}};
+
+        for(var i in graphs) {
+            Plotly.plot(ids[i],
+                graphs[i].data,
+                graphs[i].layout || {});
+        }
+    </script>
+
+</footer>
