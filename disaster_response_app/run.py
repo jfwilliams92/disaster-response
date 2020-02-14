@@ -63,7 +63,10 @@ def index():
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
     # render web page with plotly graphs
+    # print('here at the index page!')
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
+
+
 
 # web page that handles user query and displays model results
 @app.route('/go')
@@ -73,7 +76,9 @@ def go():
 
     # use model to predict classification for query
     classification_labels = model.predict([query])[0]
-    classification_results = dict(zip(df.columns[4:], classification_labels))
+    df_labels = (df.iloc[:, 4:] == 1).any(axis=0) 
+    classification_keys = list(df_labels[df_labels.values].index)
+    classification_results = dict(zip(classification_keys, classification_labels))
 
     # This will render the go.html Please see that file. 
     return render_template(
