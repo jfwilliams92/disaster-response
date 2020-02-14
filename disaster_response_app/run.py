@@ -1,10 +1,13 @@
 import json
 import plotly
 import pandas as pd
-
+import numpy as np
+import wordcloud
+ 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Heatmap, Layout, Figure, Scatter
+import plotly.express as px
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -21,18 +24,19 @@ df = pd.read_sql_table('CleanMessages', engine)
 # load model
 model = joblib.load("models/disaster_logit.pkl")
 
+# set up the word cloud data 
+wc = joblib.load('models/word_cloud.pkl')
+
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
@@ -53,7 +57,40 @@ def index():
             }
         }
     ]
+
+    # heatmap of label pairwise correlations
+    # drop some cols and replace 1's with np.nan
+    heatmap_df = df.drop(['id', 'child_alone'], axis=1).corr().replace(1, np.nan)
+    cols = list(heatmap_df.columns)
+    # grab the lower triangle of the values array - zeroes out the other values
+    heatmap_df = np.tril(heatmap_df)
+    # replace 0s with nan
+    heatmap_df[heatmap_df == 0] = np.nan
+    heatmap_data = Heatmap(
+        z=heatmap_df,
+        x=cols,
+        y=cols
+    )
+    heatmap_layout = Layout(
+        title=dict(text='Message Label Pairwise Correlations', x=0.5),
+        width=1000,
+        height=1000
+    )
+    graphs.append(Figure(data=heatmap_data, layout=heatmap_layout))
     
+    # create the word cloud figure
+    wordcloud_fig = px.imshow(wc)
+    wordcloud_fig.update_layout(
+        title=dict(text='150 Most Common Words in Disaster Scenarios', x=0.5),
+        width=1000,
+        height=1000,
+        xaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
+        yaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
+        hovermode=False
+    )
+
+    graphs.append(wordcloud_fig)
+
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
