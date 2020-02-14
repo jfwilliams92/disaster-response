@@ -27,6 +27,17 @@ model = joblib.load("models/disaster_logit.pkl")
 # set up the word cloud data 
 wc = joblib.load('models/word_cloud.pkl')
 
+    # create the word cloud figure here so it doesn't have to be generated on each refresh
+wordcloud_fig = px.imshow(wc)
+wordcloud_fig.update_layout(
+    title=dict(text='150 Most Common Words in Disaster Scenarios', x=0.5),
+    width=1000,
+    height=1000,
+    xaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
+    yaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
+    hovermode=False
+)
+
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
@@ -78,17 +89,7 @@ def index():
     )
     graphs.append(Figure(data=heatmap_data, layout=heatmap_layout))
     
-    # create the word cloud figure
-    wordcloud_fig = px.imshow(wc)
-    wordcloud_fig.update_layout(
-        title=dict(text='150 Most Common Words in Disaster Scenarios', x=0.5),
-        width=1000,
-        height=1000,
-        xaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
-        yaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
-        hovermode=False
-    )
-
+    # append the earlier created word cloud figure
     graphs.append(wordcloud_fig)
 
     # encode plotly graphs in JSON
