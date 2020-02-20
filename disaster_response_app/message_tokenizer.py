@@ -42,9 +42,11 @@ class MessageTokenizer(BaseEstimator, TransformerMixin):
 
     def __init__(self, remove_stops=True, lemmatize=True):
         """Initialize.
+        
         Args:
             remove_stops (bool): Whether or not to remove stop words.
             lemmatize (bool): Whether or not to lemmatize words.
+        
         Returns:
             None
         """
@@ -60,6 +62,7 @@ class MessageTokenizer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         """Clean and tokenize messages. Optionally remove stop words and lemmatize
         if self.remove_stops=True or self.lemmatize=True.
+        
         Args:
             X (arr): array of text documents to transform
         
