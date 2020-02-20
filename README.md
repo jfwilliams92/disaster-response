@@ -32,9 +32,11 @@ Now you are ready to setup and run the application. Navigate into the disaster_r
 You will need to run several setup scripts before the application is ready to be started. <br> First, load and clean the message and categories data, and save the cleaned data off into a local sqlite3 database file. <br> Provide the location of the messages csv, the location of the categories csv, and the location to which you wish to save your database file. <br> Example: <br>
 `> python data/process_data.py data/disaster_messages.csv data/disaster_categories.csv data/DisasterMessages.db`
 <br>
-Then, train and save a model from the cleaned data. <br> Provide the location of the cleaned messages database file and the path to which you wish to save your trained model.<br> 
+Then, train and save a model from the cleaned data. <br> Provide the location of the cleaned messages database file and the path to which you wish to save your trained model. Optionally, you may also provide `--n_tune_iter`, which indicates the number of hyperparameter combinations to test with a RandomizedSearchCV when training your model. If you do not provide n_tune_iter, the model will fit with preselected hyperparameters.<br> 
 Example: <br>
 `> python models/train_classifier.py data/DisasterMessages.db models/classifier.pkl`<br>
+OR <br>
+`> python models/train_classifier.py data/DisasterMessages.db models/classifier.pkl --n_tune_iter 10`<br>
 Finally, create the data necessary for the word cloud visualization. <br>
 `> python models/word_cloud.py`
 
