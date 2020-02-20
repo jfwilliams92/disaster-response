@@ -8,7 +8,7 @@ Additionally, we'll provide data cleansing and model training scripts to allow n
 <p>
 The dataset for our model building comes from Figure Eight, and is comprised of thousands of messages generated during times of disaster, including both messages sent directly to aid originizations and messages posted to social media.
 <p>
-Within this repository, I have provided two Jupyter notebooks that outline the process involved in cleaning the data and training a model to predict labels from text features. Feel free to explore disaster_response_app/exploration.
+Within this repository, I have provided two Jupyter notebooks that outline the process involved in cleaning the data and training a model to predict labels from text features. I discuss in detail some of the challenges created by this dataset, including the heavily imbalanced labels and how to properly assess the effectiveness of our classifier, and the creation of a custom class to aid in message cleaning. Feel free to explore disaster_response_app/exploration.
 
 ## Purpose and Functionality of the Web Application
 We will be deploying a web application to allow disaster responders to classify incoming messages. The web application will accept text, clean and extract features from the text, and generate a prediction for each potential message label from our trained model.<br> If you select 'Hard Label Classification', only the labels for which the model predicted positively will appear.<br> If you select 'Probability of Label', all potential labels will appear, color-coded according to the model's predicted probability of the label being true. 
@@ -16,6 +16,19 @@ We will be deploying a web application to allow disaster responders to classify 
 * Labels with a predicted probability <= 33% will appear red. 
 * Labels with a predicted probability between 34% and 67% will appear yellow.
 * Labels with a predicted probability > 67% will appear green.
+
+## Summary of Files and Folders
+* disaster-response -- root directory
+  * /screenshots -- contains images of the web application homescreen and prediction page
+  * /requirements.txt -- contains the packages and versions required to run this application
+  * /README.md -- information on the project and application
+  * /disaster_response_app -- contains all files necessary to run setup and run application
+    * /data -- contains dataset csv files, cleaned messages db file, and process_data.py, the ETL script
+    * /exploration -- contains data and Jupyter notebooks containing discussion of project challenges and processes
+    * /models -- contains trained classifier, wordcloud files, and train_classifier.py, the script to train and save a classifier
+    * /templates -- contains the html files for the web application pages
+  * /message_tokenizer.py -- contains the custom class to aid in message cleaning
+  * /run.py -- main script of the web app
 
 ## Installation and Setup Instructions
 In order to set up this application to run locally on your machine, clone this repository or download as a .zip file. <br>
