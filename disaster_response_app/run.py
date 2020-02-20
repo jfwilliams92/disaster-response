@@ -73,7 +73,7 @@ def index():
 
     # heatmap of label pairwise correlations
     # drop some cols and replace 1's with np.nan
-    heatmap_df = df.drop(['id', 'child_alone'], axis=1).corr().replace(1, np.nan)
+    heatmap_df = df.drop(['id'], axis=1).corr().replace(1, np.nan)
     cols = list(heatmap_df.columns)
     # grab the lower triangle of the values array - zeroes out the other values
     heatmap_df = np.tril(heatmap_df)
@@ -117,18 +117,8 @@ def go():
     # predict label probability for 'soft_class'
     elif classification_type == 'soft_class':
         classification_labels = model.predict_proba([query])[0]
-    
-    
-    ##### removing this piece to comply with the rubric ######
-    
-    # filter to labels with any positive instances
-    # this is what happens during classifier training - otherwise there will be a prediction-label mismatch
-    
-    # df_labels = (df.iloc[:, 4:] == 1).any(axis=0) 
-    # classification_keys = list(df_labels[df_labels.values].index)
-    # classification_results = dict(zip(classification_keys, classification_labels))
 
-    classification_keys = list(df.columns)
+    classification_keys = list(df.columns[4:])
     classification_results = dict(zip(classification_keys, classification_labels))
 
     # pass the data back to the go.html page 
