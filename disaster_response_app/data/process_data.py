@@ -50,13 +50,15 @@ def clean_data(df):
     # assign label names
     cats_expanded.columns = labels
 
+    # make sure all label values are binary
+    cats_expanded.where(cats_expanded < 2, 1, inplace=True)
+
     # merge with orginal dataframe on index and drop now defunct 'categories' column
     clean_cats = df \
         .merge(cats_expanded, how='inner', left_index=True, right_index=True) \
         .drop('categories', axis=1)
 
     return clean_cats
-
 
 def save_data(df, database_filename):
     """Connect to/initialize sqlite3 database and write clean messages
