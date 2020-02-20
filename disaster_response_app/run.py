@@ -11,11 +11,13 @@ import plotly.express as px
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
+# import custom MessageTokenizer
 from os import path
 import sys
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from message_tokenizer import MessageTokenizer
 
+# create app and read in data
 app = Flask(__name__)
 
 engine = create_engine('sqlite:///data/DisasterMessages.db')
@@ -27,7 +29,7 @@ model = joblib.load("models/disaster_logit.pkl")
 # set up the word cloud data 
 wc = joblib.load('models/word_cloud.pkl')
 
-    # create the word cloud figure here so it doesn't have to be generated on each refresh
+# create the word cloud figure here so it doesn't have to be generated on each refresh
 wordcloud_fig = px.imshow(wc)
 wordcloud_fig.update_layout(
     title=dict(text='150 Most Common Words in Disaster Scenarios', x=0.5),
@@ -116,10 +118,17 @@ def go():
     elif classification_type == 'soft_class':
         classification_labels = model.predict_proba([query])[0]
     
+    
+    ##### removing this piece to comply with the rubric ######
+    
     # filter to labels with any positive instances
     # this is what happens during classifier training - otherwise there will be a prediction-label mismatch
-    df_labels = (df.iloc[:, 4:] == 1).any(axis=0) 
-    classification_keys = list(df_labels[df_labels.values].index)
+    
+    # df_labels = (df.iloc[:, 4:] == 1).any(axis=0) 
+    # classification_keys = list(df_labels[df_labels.values].index)
+    # classification_results = dict(zip(classification_keys, classification_labels))
+
+    classification_keys = list(df.columns)
     classification_results = dict(zip(classification_keys, classification_labels))
 
     # pass the data back to the go.html page 
@@ -129,7 +138,6 @@ def go():
         classification_result=classification_results,
         classification_type=classification_type
     )
-
 
 def main():
     app.run(debug=True)

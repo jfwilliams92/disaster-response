@@ -1,10 +1,11 @@
-import sys
 
 # import libraries
+
+import sys
 import pandas as pd
 import sqlite3
 import re
-
+import pickle
 
 from sqlalchemy import create_engine
 from sklearn.model_selection import train_test_split
@@ -12,6 +13,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.multiclass import OneVsRestClassifier
+# from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import hamming_loss, make_scorer
 from sklearn.metrics import classification_report, confusion_matrix
@@ -20,12 +22,12 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.utils.testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 
+# import custom MessageTokenizer class
 from os import path
 import sys
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from message_tokenizer import MessageTokenizer
 
-import pickle
 
 def load_data(database_filepath):
     """Load message and category data from a sqlite3 database file.
@@ -45,16 +47,6 @@ def load_data(database_filepath):
     # define variables. X is input, Y is target
     X = df['message']
     Y = df.drop(['id', 'message', 'original', 'genre'], axis=1) 
-
-    # check to make sure we have at least one instance for each label
-    labels_with_no_instance = Y.columns[~(Y == 1).any(axis=0)]
-    # drop labels that have no instance of positive class
-    Y = Y.drop(labels_with_no_instance, axis=1)
-
-    # drop rows that are non-binary
-    drop_index = Y[~Y.isin([0, 1]).all(axis=1)].index
-    Y = Y.drop(drop_index)
-    X = X.drop(drop_index)
 
     return X.values, Y.values, list(Y.columns)
 
@@ -192,7 +184,9 @@ def main():
         print(
             """Argument parsing failed. Please provide the location of the database file containing the message data,
             the filepath where you wish the fitted model to be saved, and the number of 
-            hyperparameter combinations you would like to test.  \n\nExample usage: 
+            hyperparameter combinations you would like to test. If you do not supply --n_tune_iter, 
+            then the model will be fit on preselected hyperparameters.
+             \n\nExample usage: 
             python train_classifier.py ../data/DisasterResponse.db classifier.pkl --n_tune_iter 10
             """
         )

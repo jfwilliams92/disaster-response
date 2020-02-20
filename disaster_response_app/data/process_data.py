@@ -53,6 +53,11 @@ def clean_data(df):
     # make sure all label values are binary
     cats_expanded.where(cats_expanded < 2, 1, inplace=True)
 
+    # check to make sure we have at least one instance for each label
+    labels_with_no_instance = cats_expanded.columns[~(cats_expanded == 1).any(axis=0)]
+    # drop labels that have no instance of positive class
+    cats_expanded = cats_expanded.drop(labels_with_no_instance, axis=1)
+
     # merge with orginal dataframe on index and drop now defunct 'categories' column
     clean_cats = df \
         .merge(cats_expanded, how='inner', left_index=True, right_index=True) \
